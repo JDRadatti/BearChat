@@ -25,12 +25,12 @@ const (
 
 // RegisterRoutes initializes the api endpoints and maps the requests to specific functions
 func RegisterRoutes(router *mux.Router) error {
-	router.HandleFunc("/api/auth/signup", signup).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
-	router.HandleFunc("/api/auth/signin", signin).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
-	router.HandleFunc("/api/auth/logout", logout).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
-	router.HandleFunc("/api/auth/verify", verify).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
-	router.HandleFunc("/api/auth/sendreset", sendReset).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
-	router.HandleFunc("/api/auth/resetpw", resetPassword).Methods(/*YOUR CODE HERE*/, http.MethodOptions)
+	router.HandleFunc("/api/auth/signup", signup).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/api/auth/signin", signin).Methods(http.MethodPost, http.MethodOptions)
+	router.HandleFunc("/api/auth/logout", logout).Methods(http.MethodOptions)
+	router.HandleFunc("/api/auth/verify", verify).Methods(http.MethodOptions)
+	router.HandleFunc("/api/auth/sendreset", sendReset).Methods(http.MethodOptions)
+	router.HandleFunc("/api/auth/resetpw", resetPassword).Methods(http.MethodOptions)
 
 	// Load sendgrid credentials
 	err := godotenv.Load()
@@ -54,12 +54,16 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Obtain the credentials from the request body
-	// YOUR CODE HERE
-
+	credentials := Credentials{}
+	err := json.NewDecoder(request.Body).Decode(&credentials)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	//Check if the username already exists
 	var exists bool
-	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/).Scan(/*YOUR CODE HERE*/)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", credentials.Username).Scan(&exists)
 	
 	//Check for error
 	if err != nil {
@@ -76,7 +80,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if the email already exists
-	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/).Scan(&exists)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", credentials.Email).Scan(&exists)
 	
 	//Check for error
 	// YOUR CODE HERE
@@ -125,7 +129,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Set the cookie, name it "access_token"
 	http.SetCookie(w, &http.Cookie{
-		Name:    "YOUR CODE HERE",
+		Name:    "access_token",
 		Value:   /*YOUR CODE HERE*/,
 		Expires: /*YOUR CODE HERE*/,
 		// Leave these next three values commented for now
@@ -231,9 +235,9 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// logging out causes expiration time of cookie to be set to now
 
 	//Set the access_token and refresh_token to have an empty value and set their expiration date to anytime in the past
-	var expiresAt = /*YOUR CODE HERE*/
-	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: /*YOUR CODE HERE*/, Expires: /*YOUR CODE HERE*/})
-	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: /*YOUR CODE HERE*/, Expires: /*YOUR CODE HERE*/})
+	var expiresAt = time.Now() - 1
+	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: "", Expires: expiresAt})
+	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: "", Expires: expiresAt})
 	return
 }
 
@@ -256,10 +260,14 @@ func verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Obtain the user with the verifiedToken from the query parameter and set their verification status to the integer "1"
-	_, err := DB.Exec("YOUR CODE HERE", /*YOUR CODE HERE*/)
+	
+	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query("verifiedToken"))
 
 	//Check for errors in executing the previous query
-	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(w, errors.New("Invalid verification token").Error(), http.StatusInternalServerError)
+		log.Print(errors.New("Invalid verification token").Error())
+	}
 
 	return
 }
