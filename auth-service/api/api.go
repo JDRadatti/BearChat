@@ -320,6 +320,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	//Send an access token as a cookie?????????????????
+	return 
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
@@ -427,6 +428,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 	//get the username, email, and password from the body
 	// "YOUR CODE HERE"
+	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query("verifiedToken"))
 
 	//Check for errors decoding the body
 	// "YOUR CODE HERE"
@@ -440,7 +442,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	password := credentials.Password
 	var exists bool
 	//check if the username and token pair exist
-	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/).Scan(/*YOUR CODE HERE*/)
+	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/).Scan(&exists)
 
 	//Check for errors executing the query
 	// "YOUR CODE HERE"
