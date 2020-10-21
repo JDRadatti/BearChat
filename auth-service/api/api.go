@@ -84,20 +84,37 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	
 	//Check for error
 	// YOUR CODE HERE
+	if err != nil {
+		http.Error(w, errors.New("error checking if email exitst").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 	//Check boolean returned from query
 	// YOUR CODE HERE
+	if exists == true {
+		http.Error(w, errors.New("this email is taken").Error(), http.StatusConflict)
+		return
+	}
 	
 
 	//Hash the password using bcrypt and store the hashed password in a variable
 	// YOUR CODE HERE
+	hashedPassword, err = bcrypt.GenerateFromPassword(credentials.Password, bcrypt.DefaultCost)
+
 
 	//Check for errors during hashing process
 	// YOUR CODE HERE
+	if err != nil {
+		http.Error(w, errors.New("error hashing the passwoed").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 
 	//Create a new user UUID, convert it to string, and store it within a variable
 	// YOUR CODE HERE
+	uuid := 
 	
 
 	//Create new verification token with the default token size (look at GetRandomBase62 and our constants)
