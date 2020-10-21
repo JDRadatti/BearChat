@@ -63,7 +63,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Check if the username already exists
 	var exists bool
-	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", credentials.Username).Scan(&exists)
+	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", credentials.Username).Scan(&exists)
 	
 	//Check for error
 	if err != nil {
@@ -80,7 +80,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if the email already exists
-	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", credentials.Email).Scan(&exists)
+	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", credentials.Email).Scan(&exists)
 	
 	//Check for error
 	// YOUR CODE HERE
@@ -100,13 +100,13 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Hash the password using bcrypt and store the hashed password in a variable
 	// YOUR CODE HERE
-	hashedPassword, err = bcrypt.GenerateFromPassword(credentials.Password, bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(credentials.Password), bcrypt.DefaultCost)
 
 
 	//Check for errors during hashing process
 	// YOUR CODE HERE
 	if err != nil {
-		http.Error(w, errors.New("error hashing the passwoed").Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("error hashing the password").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
 	}
@@ -114,17 +114,24 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Create a new user UUID, convert it to string, and store it within a variable
 	// YOUR CODE HERE
-	uuid := 
+	var uuid = string(uuid.New())
 	
 
 	//Create new verification token with the default token size (look at GetRandomBase62 and our constants)
 	// YOUR CODE HERE
+	var verificationToken = GetRandomBase62(verifyTokenSize)
 
 	//Store credentials in database
-	_, err = DB.Query("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5)", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
 	
 	//Check for errors in storing the credentials
 	// YOUR CODE HERE
+	if err != nil {
+		http.Error(w, errors.New("error stroing the credentials").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
+
 
 
 	//Generate an access token, expiry dates are in Unix time
