@@ -246,7 +246,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	// Check if hashed password matches the one corresponding to the email
 	// "YOUR CODE HERE"
-	err := CompareHashAndPassword(credentials.hashedPassword, byte[](hashedPassword))
+	err := CompareHashAndPassword(hashedPassword, byte[](credentials.Password))
 
 	//Check error in comparing hashed passwords
 	// "YOUR CODE HERE"
