@@ -121,13 +121,13 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	// YOUR CODE HERE
 	var verificationToken = GetRandomBase62(verifyTokenSize)
 
-	//Store credentials in database
-	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5)", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	//Store credentials in database *********** Not 100% sure that these are the correct inputs... there is only 5 "YOUR CODE HERE" notes but 7 columns in the users table
+	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)", credentials.Username, credentials.Email, string(hashedPassword), false, nil, verificationToken, uuid)
 	
 	//Check for errors in storing the credentials
 	// YOUR CODE HERE
 	if err != nil {
-		http.Error(w, errors.New("error stroing the credentials").Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("error storing the credentials").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
 	}
@@ -135,27 +135,32 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 
 	//Generate an access token, expiry dates are in Unix time
-	accessExpiresAt := /*YOUR CODE HERE*/
+	accessExpiresAt := time.Now().Add(DefaultAccessJWTExpiry)
 	var accessToken string
 	accessToken, err = setClaims(AuthClaims{
-		UserID: "YOUR CODE HERE",
+		UserID: uuid,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "access",
-			ExpiresAt: /*YOUR CODE HERE*/,
+			ExpiresAt: accessExpiresAt,
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  /*YOUR CODE HERE*/,
+			IssuedAt:  time.Now(),
 		},
 	})
 	
 	//Check for error in generating an access token
 	// YOUR CODE HERE
+	if err != nil {
+		http.Error(w, errors.New("error generating access token").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 
 	//Set the cookie, name it "access_token"
 	http.SetCookie(w, &http.Cookie{
 		Name:    "access_token",
-		Value:   /*YOUR CODE HERE*/,
-		Expires: /*YOUR CODE HERE*/,
+		Value:   accessToken,
+		Expires: accessExpiresAt,
 		// Leave these next three values commented for now
 		// Secure: true,
 		// HttpOnly: true,
@@ -164,15 +169,15 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	})
 
 	//Generate refresh token
-	var refreshExpiresAt = time.Now().Add(DefaultAccessJWTExpiry)
+	var refreshExpiresAt = time.Now().Add(DefaultRefreshJWTExpiry)
 	var refreshToken string
 	refreshToken, err = setClaims(AuthClaims{
 		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "refresh",
-			ExpiresAt: /*YOUR CODE HERE*/,
+			ExpiresAt: refreshExpiresAt,
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  /*YOUR CODE HERE*/,
+			IssuedAt:  time.Now(),
 		},
 	})
 
@@ -184,9 +189,9 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//set the refresh token ("refresh_token") as a cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:    "YOUR CODE HERE",
-		Value:   /*YOUR CODE HERE*/,
-		Expires: /*YOUR CODE HERE*/,
+		Name:    "refresh_token",
+		Value:   refreshToken,
+		Expires: refreshExpiresAt,
 		Path: "/",
 	})
 
@@ -199,7 +204,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	w.WriteHeader("YOUR CODE HERE")
+	w.WriteHeader("Signup complete") //  not sure what to put here ?????
 	return
 }
 
@@ -215,9 +220,15 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	//Store the credentials in a instance of Credentials
 	// "YOUR CODE HERE"
+	credentials := Credentials{}
+	err := json.NewDecoder(request.Body).Decode(&credentials)
 
 	//Check for errors in storing credntials
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	//Get the hashedPassword and userId of the user
 	var hashedPassword, userID string
