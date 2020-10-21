@@ -398,7 +398,7 @@ func sendReset(w http.ResponseWriter, r *http.Request) {
 	token := GetRandomBase62(resetTokenSize)
 
 	//Obtain the user with the specified email and set their resetToken to the token we generated
-	_, err = DB.Query("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	_, err = DB.Query("SELECT hashedPassword, userID FROM users WHERE email = ?", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
 	
 	//Check for errors executing the queries
 	// "YOUR CODE HERE"
@@ -428,13 +428,20 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 	//get the username, email, and password from the body
 	// "YOUR CODE HERE"
-	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query("verifiedToken"))
+	credentials := Credentials{}
+	err := json.NewDecoder(request.Body).Decode(&credentials)
 
 	//Check for errors decoding the body
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 
 	//Check for invalid inputs, return an error if input is invalid
 	// "YOUR CODE HERE"
+
 
 
 	email := credentials.Email;
@@ -442,18 +449,26 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	password := credentials.Password
 	var exists bool
 	//check if the username and token pair exist
-	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/).Scan(&exists)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = $1 AND resetToken = $2", username, token).Scan(&exists)
 
 	//Check for errors executing the query
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(w, errors.New("error executing the query").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 	//Check exists boolean. Call an error if the username-token pair doesn't exist
 	// "YOUR CODE HERE"
-
-
+	if exists != true {
+		http.Error(w, errors.New("username-token pair does not exist").Error(), http.StatusConflict)
+		return
+	}
 
 	//Hash the new password
 	// "YOUR CODE HERE"
+
 
 	//Check for errors in hashing the new password
 	// "YOUR CODE HERE"
