@@ -122,7 +122,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	var verificationToken = GetRandomBase62(verifyTokenSize)
 
 	//Store credentials in database *********** Not 100% sure that these are the correct inputs... there is only 5 "YOUR CODE HERE" notes but 7 columns in the users table
-	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)", credentials.Username, credentials.Email, string(hashedPassword), false, nil, verificationToken, uuid)
+	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)", credentials.Username, credentials.Email, string(hashedPassword), 0, nil, verificationToken, uuid)//could be 0 or false not sure which one
 	
 	//Check for errors in storing the credentials
 	// YOUR CODE HERE
@@ -232,7 +232,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	//Get the hashedPassword and userId of the user
 	var hashedPassword, userID string
-	err = DB.QueryRow("YOUR CODE HERE", /*YOUR CODE HERE*/).Scan(/*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	err = DB.QueryRow("SELECT hashedPassword, userID FROM users WHERE email = ?", credentials.Email).Scan(&hashedPassword, &userID)
 	// process errors associated with emails
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -246,16 +246,80 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	// Check if hashed password matches the one corresponding to the email
 	// "YOUR CODE HERE"
+	err := CompareHashAndPassword(credentials.hashedPassword, byte[](hashedPassword))
 
 	//Check error in comparing hashed passwords
 	// "YOUR CODE HERE"
+	if err != nil {
+		ttp.Error(w, errors.New("error in comparing hashed passwords").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 	//Generate an access token  and set it as a cookie (Look at signup and feel free to copy paste!)
 	// "YOUR CODE HERE"
+	accessExpiresAt := time.Now().Add(DefaultAccessJWTExpiry)
+	var accessToken string
+	accessToken, err = setClaims(AuthClaims{
+		UserID: uuid,
+		StandardClaims: jwt.StandardClaims{
+			Subject:   "access",
+			ExpiresAt: accessExpiresAt,
+			Issuer:    defaultJWTIssuer,
+			IssuedAt:  time.Now(),
+		},
+	})
+	
+	//Check for error in generating an access token
+	// YOUR CODE HERE
+	if err != nil {
+		http.Error(w, errors.New("error generating access token").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
+
+	//Set the cookie, name it "access_token"
+	http.SetCookie(w, &http.Cookie{
+		Name:    "access_token",
+		Value:   accessToken,
+		Expires: accessExpiresAt,
+		// Leave these next three values commented for now
+		// Secure: true,
+		// HttpOnly: true,
+		// SameSite: http.SameSiteNoneMode,
+		Path: "/",
+	})
 
 
 	//Generate a refresh token and set it as a cookie (Look at signup and feel free to copy paste!)
 	// "YOUR CODE HERE"
+	var refreshExpiresAt = time.Now().Add(DefaultRefreshJWTExpiry)
+	var refreshToken string
+	refreshToken, err = setClaims(AuthClaims{
+		UserID: userID,
+		StandardClaims: jwt.StandardClaims{
+			Subject:   "refresh",
+			ExpiresAt: refreshExpiresAt,
+			Issuer:    defaultJWTIssuer,
+			IssuedAt:  time.Now(),
+		},
+	})
+
+	if err != nil {
+		http.Error(w, errors.New("error creating refreshToken").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
+
+	//set the refresh token ("refresh_token") as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:    "refresh_token",
+		Value:   refreshToken,
+		Expires: refreshExpiresAt,
+		Path: "/",
+	})
+
+	//Send an access token as a cookie?????????????????
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
