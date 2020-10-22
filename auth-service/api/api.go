@@ -63,7 +63,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Check if the username already exists
 	var exists bool
-	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", credentials.Username).Scan(&exists)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", credentials.Username).Scan(&exists)
 	
 	//Check for error
 	if err != nil {
@@ -80,7 +80,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if the email already exists
-	err := DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", credentials.Email).Scan(&exists)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", credentials.Email).Scan(&exists)
 	
 	//Check for error
 	// YOUR CODE HERE
@@ -122,7 +122,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	var verificationToken = GetRandomBase62(verifyTokenSize)
 
 	//Store credentials in database *********** Not 100% sure that these are the correct inputs... there is only 5 "YOUR CODE HERE" notes but 7 columns in the users table
-	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)", credentials.Username, credentials.Email, string(hashedPassword), 0, nil, verificationToken, uuid)//could be 0 or false not sure which one
+	_, err = DB.Query("INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7)", credentials.Username, credentials.Email, string(hashedPassword), 0, "", verificationToken, uuid)//could be 0 or false not sure which one
 	
 	//Check for errors in storing the credentials
 	// YOUR CODE HERE
@@ -246,7 +246,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	// Check if hashed password matches the one corresponding to the email
 	// "YOUR CODE HERE"
-	err := CompareHashAndPassword(hashedPassword, byte[](credentials.Password))
+	err = CompareHashAndPassword(hashedPassword, []byte(credentials.Password))
 
 	//Check error in comparing hashed passwords
 	// "YOUR CODE HERE"
@@ -385,23 +385,40 @@ func sendReset(w http.ResponseWriter, r *http.Request) {
 
 	//Get the email from the body (decode into an instance of Credentials)
 	// "YOUR CODE HERE"
+	credentials := Credentials{}
+	err := json.NewDecoder(request.Body).Decode(&credentials)
+	email := credentials.Email
 
-	//check for errors decoding the object
+	//Check for errors decoding the body
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	//check for other miscallenous errors that may occur
 	//what is considered an invalid input for an email?
 	// "YOUR CODE HERE"
+	if email == "" { // check for other forms of miscallenous errors
+		http.Error(w, errors.New("invalid input for email").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 
 	//generate reset token
 	token := GetRandomBase62(resetTokenSize)
 
 	//Obtain the user with the specified email and set their resetToken to the token we generated
-	_, err = DB.Query("SELECT hashedPassword, userID FROM users WHERE email = ?", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	_, err = DB.Query("UPDATE users SET resetToken = $1 WHERE email = $2", token, email)
 	
 	//Check for errors executing the queries
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(w, errors.New("user with that email does not exist").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 	// Send verification email
 	err = SendEmail(credentials.Email, "BearChat Password Reset", "password-reset.html", map[string]interface{}{"Token": token})
@@ -441,11 +458,14 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 	//Check for invalid inputs, return an error if input is invalid
 	// "YOUR CODE HERE"
+	if len(credentials.Password) <= 8 { //Password must be > 8 digits ???? I don't know what conditions to require for new password
+		http.Error(w, errors.New("invalid password").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
-
-
-	email := credentials.Email;
-	username := credentials.Username;
+	email := credentials.Email
+	username := credentials.Username
 	password := credentials.Password
 	var exists bool
 	//check if the username and token pair exist
@@ -468,14 +488,21 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 	//Hash the new password
 	// "YOUR CODE HERE"
+	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
 
 
 	//Check for errors in hashing the new password
 	// "YOUR CODE HERE"
+	if err != nil {
+		http.Error(w, errors.New("errror hashing the new password").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
+	}
 
 
 	//input new password and clear the reset token (set the token equal to empty string)
-	_, err = DB.Exec("YOUR CODE HERE", /*YOUR CODE HERE*/, /*YOUR CODE HERE*/, /*YOUR CODE HERE*/)
+	_, err = DB.Exec("UPDATE users SET password = $1 AND resetToken = $2 WHERE email = $3", password, "", email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Print(err.Error())
