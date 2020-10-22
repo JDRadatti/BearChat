@@ -55,9 +55,9 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Obtain the credentials from the request body
 	credentials := Credentials{}
-	err := json.NewDecoder(request.Body).Decode(&credentials)
+	err := json.NewDecoder(r.Body).Decode(&credentials)
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -114,7 +114,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Create a new user UUID, convert it to string, and store it within a variable
 	// YOUR CODE HERE
-	var uuid = string(uuid.New())
+	var uuid = uuid.New().String()
 	
 
 	//Create new verification token with the default token size (look at GetRandomBase62 and our constants)
@@ -141,9 +141,9 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		UserID: uuid,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "access",
-			ExpiresAt: accessExpiresAt,
+			ExpiresAt: accessExpiresAt.Unix(),
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  time.Now(),
+			IssuedAt:  time.Now().Unix(),
 		},
 	})
 	
@@ -172,12 +172,12 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	var refreshExpiresAt = time.Now().Add(DefaultRefreshJWTExpiry)
 	var refreshToken string
 	refreshToken, err = setClaims(AuthClaims{
-		UserID: userID,
+		UserID: uuid,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "refresh",
-			ExpiresAt: refreshExpiresAt,
+			ExpiresAt: refreshExpiresAt.Unix(),
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  time.Now(),
+			IssuedAt:  time.Now().Unix(),
 		},
 	})
 
@@ -204,7 +204,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	w.WriteHeader("Signup complete") //  not sure what to put here ?????
+	w.WriteHeader(201) //  not sure what to put here ?????
 	return
 }
 
@@ -221,12 +221,12 @@ func signin(w http.ResponseWriter, r *http.Request) {
 	//Store the credentials in a instance of Credentials
 	// "YOUR CODE HERE"
 	credentials := Credentials{}
-	err := json.NewDecoder(request.Body).Decode(&credentials)
+	err := json.NewDecoder(r.Body).Decode(&credentials)
 
 	//Check for errors in storing credntials
 	// "YOUR CODE HERE"
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -246,12 +246,12 @@ func signin(w http.ResponseWriter, r *http.Request) {
 
 	// Check if hashed password matches the one corresponding to the email
 	// "YOUR CODE HERE"
-	err = CompareHashAndPassword(hashedPassword, []byte(credentials.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(credentials.Password))
 
 	//Check error in comparing hashed passwords
 	// "YOUR CODE HERE"
 	if err != nil {
-		ttp.Error(w, errors.New("error in comparing hashed passwords").Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("error in comparing hashed passwords").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
 	}
@@ -261,12 +261,12 @@ func signin(w http.ResponseWriter, r *http.Request) {
 	accessExpiresAt := time.Now().Add(DefaultAccessJWTExpiry)
 	var accessToken string
 	accessToken, err = setClaims(AuthClaims{
-		UserID: uuid,
+		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "access",
-			ExpiresAt: accessExpiresAt,
+			ExpiresAt: accessExpiresAt.Unix(),
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  time.Now(),
+			IssuedAt:  time.Now().Unix(),
 		},
 	})
 	
@@ -299,9 +299,9 @@ func signin(w http.ResponseWriter, r *http.Request) {
 		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "refresh",
-			ExpiresAt: refreshExpiresAt,
+			ExpiresAt: refreshExpiresAt.Unix(),
 			Issuer:    defaultJWTIssuer,
-			IssuedAt:  time.Now(),
+			IssuedAt:  time.Now().Unix(),
 		},
 	})
 
@@ -335,7 +335,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	// logging out causes expiration time of cookie to be set to now
 
 	//Set the access_token and refresh_token to have an empty value and set their expiration date to anytime in the past
-	var expiresAt = time.Now() - 1
+	var expiresAt = time.Now().Add(1 * -time.Hour)
 	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: "", Expires: expiresAt})
 	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: "", Expires: expiresAt})
 	return
@@ -361,7 +361,7 @@ func verify(w http.ResponseWriter, r *http.Request) {
 
 	//Obtain the user with the verifiedToken from the query parameter and set their verification status to the integer "1"
 	
-	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query("verifiedToken"))
+	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query().Get("verifiedToken"))
 
 	//Check for errors in executing the previous query
 	if err != nil {
@@ -386,13 +386,13 @@ func sendReset(w http.ResponseWriter, r *http.Request) {
 	//Get the email from the body (decode into an instance of Credentials)
 	// "YOUR CODE HERE"
 	credentials := Credentials{}
-	err := json.NewDecoder(request.Body).Decode(&credentials)
+	err := json.NewDecoder(r.Body).Decode(&credentials)
 	email := credentials.Email
 
 	//Check for errors decoding the body
 	// "YOUR CODE HERE"
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -446,12 +446,12 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	//get the username, email, and password from the body
 	// "YOUR CODE HERE"
 	credentials := Credentials{}
-	err := json.NewDecoder(request.Body).Decode(&credentials)
+	err := json.NewDecoder(r.Body).Decode(&credentials)
 
 	//Check for errors decoding the body
 	// "YOUR CODE HERE"
 	if err != nil {
-		http.Error(response, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -488,7 +488,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 	//Hash the new password
 	// "YOUR CODE HERE"
-	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	newPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 
 
@@ -502,7 +502,7 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 
 
 	//input new password and clear the reset token (set the token equal to empty string)
-	_, err = DB.Exec("UPDATE users SET password = $1 AND resetToken = $2 WHERE email = $3", password, "", email)
+	_, err = DB.Exec("UPDATE users SET password = $1 AND resetToken = $2 WHERE email = $3", newPassword, "", email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Print(err.Error())
