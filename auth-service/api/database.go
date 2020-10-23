@@ -24,6 +24,7 @@ func InitDB() *sql.DB {
 	// Assign the connection to the "DB" variable
 	// Look at how it's done in the other microservices!
 	// "YOUR CODE HERE"
+	DB, err = sql.Open("mysql", "root:root@tcp(172.28.1.2:3306)/auth-service") // possibly add DB?parseTime=true but I dont think it's necessary 
 	
 	if err != nil {
 		log.Println("couldnt connect")
