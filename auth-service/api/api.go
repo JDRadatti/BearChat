@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	jwtTokenSize    = 128
 	verifyTokenSize = 6
 	resetTokenSize  = 6
 )

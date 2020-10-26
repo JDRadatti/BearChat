@@ -31,8 +31,31 @@ services:
         expose:
             - '3306'
 
+<<<<<<< HEAD
+=======
+    posts-service:
+            build: ./posts
+            container_name: posts-service
+            restart:  on-failure
+            ports:
+                - "81:80"
+            networks:
+                bearchat:
+                    ipv4_address:
+                        172.28.1.3
+            depends_on:
+            - db-server
+
+            expose:
+                - '80'
+
+>>>>>>> 2a415fc59f7815e6edf6658aa02db533f8283365
 networks:
     bearchat:
         ipam:
             config:
                 - subnet: 172.28.1.0/16
+<<<<<<< HEAD
+=======
+                
+>>>>>>> 2a415fc59f7815e6edf6658aa02db533f8283365
