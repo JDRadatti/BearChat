@@ -31,8 +31,6 @@ services:
         expose:
             - '3306'
 
-<<<<<<< HEAD
-=======
     posts-service:
             build: ./posts
             container_name: posts-service
@@ -49,13 +47,9 @@ services:
             expose:
                 - '80'
 
->>>>>>> 2a415fc59f7815e6edf6658aa02db533f8283365
 networks:
     bearchat:
         ipam:
             config:
                 - subnet: 172.28.1.0/16
-<<<<<<< HEAD
-=======
                 
->>>>>>> 2a415fc59f7815e6edf6658aa02db533f8283365
