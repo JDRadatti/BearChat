@@ -115,6 +115,9 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Create new verification token with the default token size (look at GetRandomBase62 and our constants)
 	// YOUR CODE HERE
+
+	var verificationToken = GetRandomBase62(verifyTokenSize)
+
 	//Store credentials in database *********** Not 100% sure that these are the correct inputs... there is only 5 "YOUR CODE HERE" notes but 7 columns in the users table
 	_, err = DB.Query("INSERT INTO users (username, email, hashedPassword, verified, resetToken, verifiedToken, userID) VALUES (?, ?, ?, ?, ?, ?, ?)", credentials.Username, credentials.Email, string(hashedPassword), 0, "", verificationToken, uuid) //could be 0 or false not sure which one
 	//Check for errors in storing the credentials
