@@ -63,14 +63,21 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 	//Check if the username already exists
 	var exists bool
-	err = DB.QueryRow("SELECT * FROM users WHERE EXISTS (SELECT * FROM users WHERE username = $1)", credentials.Username).Scan(&exists)
+	var dummy string
+	exists = true //set equal to true by default and if it returns no rows then we will switch it
+	err = DB.QueryRow("SELECT username FROM users WHERE username = ?", credentials.Username).Scan(&dummy)
+
 	log.Print("first query")
 	//Check for error
-	if err != nil && err != sql.ErrNoRows {
-		http.Error(w, errors.New("error checking if username exists").Error(), http.StatusInternalServerError)
-		log.Print(err.Error())
-		log.Print(err.Error())
-		return
+	if err != nil {
+		if err != sql.ErrNoRows {
+			http.Error(w, errors.New("error checking if username exists").Error(), http.StatusInternalServerError)
+			log.Print(err.Error())
+			log.Print(err.Error())
+			return
+		}
+		//we just returned no rows so we can set it to false
+		exists = false
 	}
 
 	//Check boolean returned from query
@@ -80,14 +87,20 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Check if the email already exists
-	err = DB.QueryRow("SELECT * FROM users WHERE EXISTS (SELECT * FROM users WHERE email = ?)", credentials.Email).Scan(&exists)
+	exists = true
+	err = DB.QueryRow("SELECT email FROM users WHERE email = ?", credentials.Email).Scan(&dummy)
 	log.Print("second query")
 	//Check for error
 	// YOUR CODE HERE
-	if err != nil && err != sql.ErrNoRows {
-		http.Error(w, errors.New("error checking if email exitst").Error(), http.StatusInternalServerError)
-		log.Print(err.Error())
-		return
+	if err != nil {
+		if err != sql.ErrNoRows {
+			http.Error(w, errors.New("error checking if email exists").Error(), http.StatusInternalServerError)
+			log.Print(err.Error())
+			log.Print(err.Error())
+			return
+		}
+		//we just returned no rows so we can set it to false
+		exists = false
 	}
 
 	//Check boolean returned from query
