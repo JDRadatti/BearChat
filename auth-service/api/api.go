@@ -413,12 +413,12 @@ func sendReset(w http.ResponseWriter, r *http.Request) {
 	token := GetRandomBase62(resetTokenSize)
 
 	//Obtain the user with the specified email and set their resetToken to the token we generated
-	_, err = DB.Query("UPDATE users SET resetToken = $1 WHERE email = $2", token, email)
+	_, err = DB.Query("UPDATE users SET resetToken = $ WHERE email = $", token, email)
 
 	//Check for errors executing the queries
 	// "YOUR CODE HERE"
 	if err != nil {
-		http.Error(w, errors.New("user with that email does not exist").Error(), http.StatusInternalServerError)
+		http.Error(w, errors.New("user with that email does not exist: " + email).Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
 	}
