@@ -26,8 +26,8 @@ const (
 func RegisterRoutes(router *mux.Router) error {
 	router.HandleFunc("/api/auth/signup", signup).Methods(http.MethodGet, http.MethodPost)
 	router.HandleFunc("/api/auth/signin", signin).Methods(http.MethodPost, http.MethodOptions)
-	router.HandleFunc("/api/auth/logout", logout).Methods(http.MethodOptions)
-	router.HandleFunc("/api/auth/verify", verify).Methods(http.MethodOptions)
+	router.HandleFunc("/api/auth/logout", logout).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
+	router.HandleFunc("/api/auth/verify", verify).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/api/auth/sendreset", sendReset).Methods(http.MethodOptions)
 	router.HandleFunc("/api/auth/resetpw", resetPassword).Methods(http.MethodOptions)
 
@@ -342,6 +342,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	var expiresAt = time.Now().Add(1 * -time.Hour)
 	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: "", Expires: expiresAt})
 	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: "", Expires: expiresAt})
+	w.WriteHeader(200)
 	return
 }
 
@@ -372,7 +373,7 @@ func verify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errors.New("Invalid verification token").Error(), http.StatusInternalServerError)
 		log.Print(errors.New("Invalid verification token").Error())
 	}
-
+	w.WriteHeader(400)
 	return
 }
 
