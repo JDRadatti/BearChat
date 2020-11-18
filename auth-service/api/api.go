@@ -56,7 +56,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	credentials := Credentials{}
 	err := json.NewDecoder(r.Body).Decode(&credentials)
 	if err != nil {
-		log.Print("First thing")
+		//log.Print("First thing")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -67,7 +67,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	exists = true //set equal to true by default and if it returns no rows then we will switch it
 	err = DB.QueryRow("SELECT username FROM users WHERE username = ?", credentials.Username).Scan(&dummy)
 
-	log.Print("first query")
+	//log.Print("first query")
 	//Check for error
 	if err != nil {
 		if err != sql.ErrNoRows {
@@ -89,7 +89,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	//Check if the email already exists
 	exists = true
 	err = DB.QueryRow("SELECT email FROM users WHERE email = ?", credentials.Email).Scan(&dummy)
-	log.Print("second query")
+	//log.Print("second query")
 	//Check for error
 	// YOUR CODE HERE
 	if err != nil {
@@ -136,7 +136,7 @@ func signup(w http.ResponseWriter, r *http.Request) {
 	//Check for errors in storing the credentials
 	// YOUR CODE HERE
 	if err != nil {
-		log.Print("this thing sucks")
+		//log.Print("this thing sucks")
 		http.Error(w, errors.New("error storing the credentials").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return

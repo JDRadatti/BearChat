@@ -18,8 +18,8 @@ func RegisterRoutes(router *mux.Router) error {
 
 	router.HandleFunc("/api/posts/{startIndex}", getFeed).Methods(http.MethodGet) 
 	router.HandleFunc("/api/posts/{uuid}/{startIndex}", getPosts).Methods(http.MethodGet)
-	router.HandleFunc("/api/posts/create", createPost).Methods(http.MethodGet, http.MethodPost)
-	router.HandleFunc("/api/posts/delete/{postID}", deletePost).Methods(http.MethodGet, http.MethodPost)
+	router.HandleFunc("/api/posts/create", createPost).Methods(http.MethodPost)
+	router.HandleFunc("/api/posts/delete/{postID}", deletePost).Methods(http.MethodDelete)
 
 	return nil
 }
@@ -196,37 +196,27 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 	// YOUR CODE HERE
 	vars := mux.Vars(r)
 	postID := vars["postID"]
-	log.Print(postID)
-
 
 	// Get the uuid from the access token, see getUUID(...)
 	// YOUR CODE HERE
 	uuid := getUUID(w, r)
 
 	var exists bool
-	var dummy string
 	//check if post exists
-	exists = true
-	err := DB.QueryRow("SELECT * FROM posts WHERE postID = ?", postID).Scan(&dummy)
+	err := DB.QueryRow("SELECT COUNT(*) FROM posts WHERE postID = ?", postID).Scan(&exists)
 
 	// Check for errors in executing the query
 	// YOUR CODE HERE
 	if err != nil {
-		if err != sql.ErrNoRows {
-			http.Error(w, errors.New("error executing query to find post").Error(), http.StatusInternalServerError)
-			log.Print(err.Error())
-			log.Print(err.Error())
-			return
-		}
-		//we just returned no rows so we can set it to false
-		exists = false
+		http.Error(w, errors.New("error executing query to find post").Error(), http.StatusInternalServerError)
+		log.Print(err.Error())
+		return
 	}
 
 	// Check if the post actually exists, otherwise return an http.StatusNotFound
 	// YOUR CODE HERE
 	if exists != true {
 		http.Error(w, errors.New("post does not exist").Error(), http.StatusNotFound)
-		log.Print(err.Error())
 		return
 	}
 
@@ -245,9 +235,8 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 	// Check if the uuid from the access token is the same as the authorID from the query
 	// If not, return http.StatusUnauthorized
 	// YOUR CODE HERE
-	if uuid != authorID {
+	if string(uuid) != string(authorID) {
 		http.Error(w, errors.New("unauthorized to delete this post").Error(), http.StatusUnauthorized)
-		log.Print(err.Error())
 		return
 	}
 
