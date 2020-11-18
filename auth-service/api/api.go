@@ -28,8 +28,8 @@ func RegisterRoutes(router *mux.Router) error {
 	router.HandleFunc("/api/auth/signin", signin).Methods(http.MethodPost, http.MethodOptions)
 	router.HandleFunc("/api/auth/logout", logout).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 	router.HandleFunc("/api/auth/verify", verify).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
-	router.HandleFunc("/api/auth/sendreset", sendReset).Methods(http.MethodOptions)
-	router.HandleFunc("/api/auth/resetpw", resetPassword).Methods(http.MethodOptions)
+	router.HandleFunc("/api/auth/sendreset", sendReset).Methods(http.MethodPost, http.MethodOptions)
+	router.HandleFunc("/api/auth/resetpw", resetPassword).Methods(http.MethodPost, http.MethodOptions)
 
 	// Load sendgrid credentials
 	err := godotenv.Load()
@@ -367,7 +367,7 @@ func verify(w http.ResponseWriter, r *http.Request) {
 
 	//Obtain the user with the verifiedToken from the query parameter and set their verification status to the integer "1"
 
-	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", r.URL.Query().Get("verifiedToken"))
+	_, err := DB.Exec("UPDATE users SET verified = 1 WHERE verifiedToken = ?", token[0])
 
 	//Check for errors in executing the previous query
 	if err != nil {
@@ -414,7 +414,7 @@ func sendReset(w http.ResponseWriter, r *http.Request) {
 	token := GetRandomBase62(resetTokenSize)
 
 	//Obtain the user with the specified email and set their resetToken to the token we generated
-	_, err = DB.Query("UPDATE users SET resetToken = $ WHERE email = $", token, email)
+	_, err = DB.Query("UPDATE users SET resetToken = ? WHERE email = ?", token, email)
 
 	//Check for errors executing the queries
 	// "YOUR CODE HERE"
@@ -470,9 +470,11 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	email := credentials.Email
 	username := credentials.Username
 	password := credentials.Password
+
 	var exists bool
 	//check if the username and token pair exist
-	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = $1 AND resetToken = $2", username, token).Scan(&exists)
+	err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ? AND resetToken = ?", username, token).Scan(&exists)
+	//err = DB.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", username).Scan(&exists)
 
 	//Check for errors executing the query
 	// "YOUR CODE HERE"
@@ -502,9 +504,11 @@ func resetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//input new password and clear the reset token (set the token equal to empty string)
-	_, err = DB.Exec("UPDATE users SET password = $1 AND resetToken = $2 WHERE email = $3", newPassword, "", email)
+	_, err = DB.Exec("UPDATE users SET hashedPassword = ?, resetToken = ? WHERE email = ?", string(newPassword), "", email)
+	//_, err = DB.Exec("REPLACE INTO users VALUES (?, ?, ?, ?, ?, ?, ?);", username, email, string(newPassword), 1, "", token, uuid)
+
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, errors.New("error inputting new password into users table: " + string(newPassword)).Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 	}
 
