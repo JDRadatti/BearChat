@@ -72,7 +72,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 		-Make sure to always get up to 25, and start with an offset of {startIndex} (look at the previous SQL homework for hints)\
 		-As indicated by the "posts" variable, this query returns multiple rows
 	*/
-	posts, err = DB.Query("SELECT * FROM posts WHERE userID = $1 ORDER BY postTime LIMIT 25, $2", uuid, startIndex)
+	posts, err = DB.Query("SELECT * FROM posts WHERE authorID = ? ORDER BY postTime LIMIT 25 OFFSET ?", uuid, startIndex)
 	
 	// Check for errors from the query
 	// YOUR CODE HERE
@@ -162,7 +162,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 
 	// Insert the post into the database
 	// Look at /db-server/initdb.sql for a better understanding of what you need to insert
-	result, err := DB.Exec("INSERT INTO posts VALUES ($1, $2, $3, $4);", newPost.PostBody , postID, userID, currPST)
+	result, err := DB.Exec("INSERT INTO posts VALUES (?, ?, ?, ?);", newPost.PostBody , postID, userID, currPST)
 	
 	// Check errors with executing the query
 	// YOUR CODE HERE
@@ -196,6 +196,7 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 	// YOUR CODE HERE
 	vars := mux.Vars(r)
 	postID := vars["postID"]
+	log.Print(postID)
 
 
 	// Get the uuid from the access token, see getUUID(...)
@@ -203,15 +204,22 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 	uuid := getUUID(w, r)
 
 	var exists bool
+	var dummy string
 	//check if post exists
-	err := DB.QueryRow("SELECT * FROM posts WHERE postID = ?", postID).Scan(&exists)
+	exists = true
+	err := DB.QueryRow("SELECT * FROM posts WHERE postID = ?", postID).Scan(&dummy)
 
 	// Check for errors in executing the query
 	// YOUR CODE HERE
 	if err != nil {
-		http.Error(w, errors.New("error executing query to find post").Error(), http.StatusInternalServerError)
-		log.Print(err.Error())
-		return
+		if err != sql.ErrNoRows {
+			http.Error(w, errors.New("error executing query to find post").Error(), http.StatusInternalServerError)
+			log.Print(err.Error())
+			log.Print(err.Error())
+			return
+		}
+		//we just returned no rows so we can set it to false
+		exists = false
 	}
 
 	// Check if the post actually exists, otherwise return an http.StatusNotFound
@@ -283,7 +291,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 	// Sort chronologically
 	// Always limit to 25 queries
 	// Always start at an offset of startIndex
-	posts, err := DB.Query("SELECT * FROM posts WHERE authorID <> $1 ORDER BY postTime LIMIT 25, $2;", uuid, startIndex)
+	posts, err := DB.Query("SELECT * FROM posts WHERE authorID <> ? ORDER BY postTime LIMIT 25 OFFSET ?", uuid, startIndex)
 	
 	// Check for errors in executing the query
 	// YOUR CODE HERE
