@@ -74,22 +74,22 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 	// Obtain the userID from the cookie
 	// YOUR CODE HERE
 	userIDfromCookie, _ := r.Cookie("userID")
+	//log.Print("HELLLOOOOOOOOOOOOOOOO" + userIDfromCookie.String())
 
 	// If the two ID's don't match, return a StatusUnauthorized
 	// YOUR CODE HERE
-	if userIDfromCookie != uuid {
+	if userIDfromCookie.String() != uuid {
 		http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
-		log.Print(err.Error())
 		return
 	}
 
 	// Decode the Request Body's JSON data into a profile variable
 	profile := Profile{}
-	err := json.NewDecoder(r.body).Decode(&profile)
+	err := json.NewDecoder(r.Body).Decode(&profile)
 
 	// Return an InternalServerError if there is an error decoding the request body
 	// YOUR CODE HERE
-	if err != nill {
+	if err != nil {
 		http.Error(w, errors.New("error decoding the request").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
@@ -100,11 +100,11 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 	// Insert the profile data into the users table
 	// Check db-server/initdb.sql for the scheme
 	// Make sure to use REPLACE INTO (as covered in the SQL homework)
-	err = DB.Exec("REPLACE INTO users VALUES (?, ?, ?, ?)", profile.Firstname, profile.Lastname, profile.Email, profile.UUID)
+	_, err = DB.Exec("REPLACE INTO users VALUES (?, ?, ?, ?)", profile.Firstname, profile.Lastname, profile.Email, profile.UUID)
 
 	// Return an internal server error if any errors occur when querying the database.
 	// YOUR CODE HERE
-	if err != nill {
+	if err != nil {
 		http.Error(w, errors.New("error querying the database").Error(), http.StatusInternalServerError)
 		log.Print(err.Error())
 		return
