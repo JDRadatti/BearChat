@@ -10,7 +10,7 @@ import (
 
 func RegisterRoutes(router *mux.Router) error {
 	router.HandleFunc("/api/profile/{uuid}", getProfile).Methods(http.MethodGet)
-	router.HandleFunc("/api/profile/{uuid}", updateProfile).Methods(http.MethodGet)
+	router.HandleFunc("/api/profile/{uuid}", updateProfile).Methods(http.MethodPut)
 
 	return nil
 }
@@ -71,14 +71,15 @@ func updateProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uuid := vars["uuid"] 
 
+
 	// Obtain the userID from the cookie
 	// YOUR CODE HERE
-	userIDfromCookie, _ := r.Cookie("userID")
+	userIDfromCookie := getUUID(w, r)
 	//log.Print("HELLLOOOOOOOOOOOOOOOO" + userIDfromCookie.String())
 
 	// If the two ID's don't match, return a StatusUnauthorized
 	// YOUR CODE HERE
-	if userIDfromCookie.String() != uuid {
+	if userIDfromCookie != uuid {
 		http.Error(w, errors.New("unauthorized").Error(), http.StatusUnauthorized)
 		return
 	}
